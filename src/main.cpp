@@ -138,6 +138,17 @@ void setup() {
         }
     });
     
+    // Send a test message to KNX to verify connection
+    uint16_t testGroupAddress = buildGroupAddress(0, 0, 10);  // Test GA: 0/0/10
+    uint8_t testValue = 1;  // Test value: ON
+    Serial.printf("Sending test message to KNX group address 0/0/10 with value %d\n", testValue);
+    bool knxSendResult = knxModule.sendGroupTelegram(testGroupAddress, &testValue, 1);
+    if (knxSendResult) {
+        Serial.println("SUCCESS: Test message sent to KNX bus");
+    } else {
+        Serial.println("ERROR: Failed to send test message to KNX bus");
+    }
+    
     // Send a test message to MQTT to verify connection
     Serial.println("Attempting to send test message to MQTT...");
     JsonDocument testMsg;
@@ -164,6 +175,8 @@ void loop() {
     
     // Add a heartbeat message every 30 seconds
     static unsigned long lastHeartbeat = 0;
+    static unsigned long lastKnxTest = 0;
+    
     if (millis() - lastHeartbeat > 30000) {
         Serial.println("Heartbeat: KNX-MQTT Bridge running");
         
@@ -172,5 +185,22 @@ void loop() {
         Serial.println("Status: KNX " + String(knxModule.isConnected() ? "connected" : "disconnected"));
         
         lastHeartbeat = millis();
+    }
+    
+    // Send a test message to KNX every 60 seconds
+    if (millis() - lastKnxTest > 20000) {
+        uint16_t testGroupAddress = buildGroupAddress(0, 0, 10);  // Test GA: 0/0/10
+        uint8_t testValue = (millis() / 60000) % 2;  // Alternate between 0 and 1
+        
+        Serial.printf("Periodic test: Sending to KNX group address 0/0/10 with value %d\n", testValue);
+        bool knxSendResult = knxModule.sendGroupTelegram(testGroupAddress, &testValue, 1);
+        
+        if (knxSendResult) {
+            Serial.println("SUCCESS: Periodic test message sent to KNX bus");
+        } else {
+            Serial.println("ERROR: Failed to send periodic test message to KNX bus");
+        }
+        
+        lastKnxTest = millis();
     }
 }
